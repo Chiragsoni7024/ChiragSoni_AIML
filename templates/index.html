@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MailMate AI | Professional Email Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .loader { border-top-color: #ffffff; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="flex h-screen bg-slate-50 font-sans text-slate-800 antialiased overflow-hidden selection:bg-indigo-200">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="w-72 bg-slate-900 text-slate-300 flex flex-col shadow-2xl z-20 flex-shrink-0">
+        <div class="p-6 bg-slate-950 border-b border-slate-800">
+            <h1 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                <i class="fas fa-paper-plane text-indigo-500"></i> MailMate AI
+            </h1>
+            <p class="text-[10px] text-indigo-400 mt-1.5 font-bold uppercase tracking-widest">AI Email Generation Tool</p>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-2">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4 px-2">Recent Mails</h3>
+            
+            {% if history %}
+                {% for item in history %}
+                <!-- Updated onclick event to pass data to the main UI card -->
+                <div onclick="viewHistory(`{{ item[2] | replace('\n', '\\n') | replace('\"', '\\\"') | replace('\`', '\\\`') | safe }}`, `{{ item[1] | replace('\"', '\\\"') | replace('\`', '\\\`') | safe }}`)" 
+                     class="p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg border border-slate-700/50 hover:border-indigo-500/50 transition cursor-pointer group">
+                    <div class="flex items-start gap-3">
+                        <i class="far fa-envelope text-slate-500 group-hover:text-indigo-400 mt-1 text-sm transition"></i>
+                        <div class="overflow-hidden">
+                            <p class="text-xs font-bold text-slate-200 truncate">{{ item[0] }}</p>
+                            <p class="text-xs text-slate-400 truncate mt-0.5">{{ item[1] }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-8 px-4">
+                    <i class="fas fa-inbox text-slate-600 text-2xl mb-2"></i>
+                    <p class="text-xs text-slate-500">No emails generated yet.<br>Your history will appear here.</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="p-4 border-t border-slate-800 bg-slate-900 text-xs text-slate-500 text-center">
+            Built for FLUX Task
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto relative scroll-smooth">
+        
+        <div class="max-w-4xl mx-auto w-full p-8 pb-20">
+            
+            <div class="mb-10 text-center">
+                <h2 class="text-4xl font-extrabold text-slate-800 tracking-tight">Turn your thoughts into <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">perfect emails.</span></h2>
+                <p class="mt-3 text-slate-500 font-medium text-lg">Speak or type your points, and let MailMate AI do the heavy lifting.</p>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 mb-8 relative overflow-hidden">
+                <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-50 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+
+                <form id="emailForm" action="/generate" method="post" class="space-y-6 relative z-10">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">Mode</label>
+                            <select name="mode" id="modeSelect" onchange="toggleMode()" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition font-medium text-slate-700">
+                                <option value="compose">✨ Compose New Email</option>
+                                <option value="reply">↩️ Smart Reply</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">Language</label>
+                            <select name="language" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-medium text-slate-700">
+                                <option value="English">English</option>
+                                <option value="Hindi">Hindi (Professional)</option>
+                                <option value="Hinglish">Hinglish (Casual Pro)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="composeFields" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">Recipient</label>
+                            <input type="text" id="recipientInput" name="recipient" placeholder="e.g., HR Manager, Principal" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">Topic</label>
+                            <input type="text" id="topicInput" name="topic" placeholder="e.g., Leave Request, Project Update" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">Tone</label>
+                            <select name="tone" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-700">
+                                <option value="Professional">Professional & Formal</option>
+                                <option value="Persuasive">Persuasive / Pitch</option>
+                                <option value="Apologetic">Apologetic</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5">Length</label>
+                            <select name="length" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-700">
+                                <option value="Standard">Standard</option>
+                                <option value="Concise">Short & Crisp</option>
+                                <option value="Detailed">Detailed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label id="keyPointsLabel" class="block text-sm font-bold text-slate-700 mb-1.5">What do you want to say?</label>
+                        <div class="relative">
+                            <textarea id="keyPointsInput" name="key_points" rows="4" required placeholder="Type your key points, or click the mic to speak..." class="w-full px-4 py-4 pr-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"></textarea>
+                            
+                            <button type="button" id="micBtn" title="Speak to write" class="absolute bottom-4 right-4 w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full shadow-sm text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                        </div>
+                        <p id="micStatus" class="text-xs text-indigo-600 mt-2 hidden font-medium animate-pulse">Listening... Speak now.</p>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="w-full bg-slate-900 hover:bg-indigo-600 text-white font-bold py-4 px-4 rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 flex justify-center items-center group">
+                        <span id="btnText"><i class="fas fa-wand-magic-sparkles mr-2 group-hover:rotate-12 transition"></i> Generate Mail</span>
+                        <div id="btnSpinner" class="hidden w-5 h-5 border-4 border-white border-t-transparent rounded-full loader ml-3"></div>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Output Section (Always in DOM, hidden if empty) -->
+            <div id="outputSection" class="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all mt-4 ring-1 ring-indigo-50 {% if not email_content %}hidden{% endif %}">
+                <div class="p-8">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <h2 class="text-xl font-extrabold text-slate-800">Generated Mail</h2>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="copyToClipboard()" class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-5 rounded-lg transition flex items-center justify-center gap-2">
+                                <i class="far fa-copy"></i> Copy
+                            </button>
+                            <button onclick="openInGmail()" class="flex-1 sm:flex-none bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2.5 px-5 rounded-lg transition flex items-center justify-center gap-2">
+                                <i class="fab fa-google"></i> Gmail
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100 whitespace-pre-wrap text-slate-700 font-medium leading-relaxed font-serif text-lg" id="emailOutput">{{ email_content if email_content else '' }}</div>
+                    
+                    <span id="hiddenTopic" class="hidden">{{ generated_subject if generated_subject else '' }}</span>
+                </div>
+            </div>
+            
+            <script>
+                // Auto-scroll on fresh generation
+                {% if email_content %}
+                window.onload = function() {
+                    document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
+                {% endif %}
+            </script>
+
+        </div>
+    </main>
+
+    <script>
+        function toggleMode() {
+            const mode = document.getElementById('modeSelect').value;
+            const composeFields = document.getElementById('composeFields');
+            const recipientInput = document.getElementById('recipientInput');
+            const topicInput = document.getElementById('topicInput');
+            const keyPointsLabel = document.getElementById('keyPointsLabel');
+
+            if(mode === 'reply') {
+                composeFields.classList.add('hidden');
+                recipientInput.removeAttribute('required');
+                topicInput.removeAttribute('required');
+                keyPointsLabel.innerText = 'Paste the email you received here:';
+            } else {
+                composeFields.classList.remove('hidden');
+                recipientInput.setAttribute('required', 'required');
+                topicInput.setAttribute('required', 'required');
+                keyPointsLabel.innerText = 'What do you want to say?';
+            }
+        }
+        window.addEventListener('DOMContentLoaded', toggleMode);
+
+        document.getElementById('emailForm').addEventListener('submit', function() {
+            document.getElementById('btnText').innerText = 'Crafting your mail...';
+            document.getElementById('btnSpinner').classList.remove('hidden');
+            document.getElementById('submitBtn').classList.add('opacity-90', 'cursor-not-allowed', 'bg-indigo-600');
+        });
+
+        // Web Speech API
+        const micBtn = document.getElementById('micBtn');
+        const micStatus = document.getElementById('micStatus');
+        const keyPointsInput = document.getElementById('keyPointsInput');
+        
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            micBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                recognition.start();
+                micBtn.classList.add('text-white', 'bg-red-500', 'border-red-500', 'animate-bounce');
+                micBtn.classList.remove('text-slate-400', 'bg-white');
+                micStatus.classList.remove('hidden');
+            });
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                keyPointsInput.value += (keyPointsInput.value ? ' ' : '') + transcript;
+                
+                micBtn.classList.remove('text-white', 'bg-red-500', 'border-red-500', 'animate-bounce');
+                micBtn.classList.add('text-slate-400', 'bg-white');
+                micStatus.classList.add('hidden');
+            };
+
+            recognition.onerror = (event) => {
+                alert('Microphone error: ' + event.error);
+                micBtn.classList.remove('text-white', 'bg-red-500', 'border-red-500', 'animate-bounce');
+                micBtn.classList.add('text-slate-400', 'bg-white');
+                micStatus.classList.add('hidden');
+            };
+        } else {
+            micBtn.style.display = 'none';
+        }
+
+        function copyToClipboard() {
+            const emailText = document.getElementById('emailOutput').innerText;
+            navigator.clipboard.writeText(emailText).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+
+        function openInGmail() {
+            const rawText = document.getElementById('emailOutput').innerText;
+            let subjectMatch = rawText.match(/Subject:\s*(.*)/i);
+            let subject = subjectMatch ? subjectMatch[1].trim() : (document.getElementById('hiddenTopic').innerText || "New Email");
+            let bodyText = rawText.replace(/Subject:\s*.*\n?/i, '').trim();
+
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+            window.open(gmailUrl, '_blank');
+        }
+
+        // Updated History View Function
+        function viewHistory(content, topic) {
+            // Put content into the main card
+            document.getElementById('emailOutput').innerText = content;
+            document.getElementById('hiddenTopic').innerText = topic;
+            
+            // Unhide the section
+            const outputSection = document.getElementById('outputSection');
+            outputSection.classList.remove('hidden');
+            
+            // Smoothly scroll down to it
+            outputSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    </script>
+</body>
+</html>
